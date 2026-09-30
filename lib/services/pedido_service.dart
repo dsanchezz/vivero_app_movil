@@ -1,5 +1,5 @@
 import '../models/pedido.dart';
-import '../models/tipo_cliente.dart';
+import 'pricing/calculadora_precio.dart';
 import 'promocion_service.dart';
 
 /// Guarda los pedidos y resuelve las acciones de la encargada
@@ -8,6 +8,7 @@ import 'promocion_service.dart';
 /// arbitre esa verdad.
 class PedidoService {
   final List<Pedido> _pedidos = [];
+  final CalculadoraPrecio _calculadoraPrecio = CalculadoraPrecio();
 
   List<Pedido> get pedidos => List.unmodifiable(_pedidos);
 
@@ -15,32 +16,15 @@ class PedidoService {
 
   double calcularTotalPedido(Pedido pedido) {
     final promocionActiva = PromocionService.temporadaActiva;
-    double total = 0;
 
-    for (final partida in pedido.partidas) {
-      double precioUnitario;
-
-      if (pedido.tipoCliente == TipoCliente.mayorista) {
-        if (partida.cantidad >= 10) {
-          precioUnitario = partida.planta.precioBase * 0.80;
-        } else {
-          precioUnitario = partida.planta.precioBase * 0.90;
-        }
-        if (promocionActiva) {
-          precioUnitario = precioUnitario * 0.95;
-        }
-      } else {
-        if (promocionActiva) {
-          precioUnitario = partida.planta.precioBase * 0.85;
-        } else {
-          precioUnitario = partida.planta.precioBase;
-        }
-      }
-
-      total += precioUnitario * partida.cantidad;
-    }
-
-    return total;
+    return pedido.partidas.fold(0.0, (total, partida) {
+      return total +
+          _calculadoraPrecio.calcularPrecioPartida(
+            partida,
+            pedido.tipoCliente,
+            promocionActiva: promocionActiva,
+          );
+    });
   }
 
   Pedido confirmar(Pedido pedido) {
