@@ -9,6 +9,11 @@ class Pedido {
   final TipoCliente tipoCliente;
   EstadoPedido estado;
 
+  /// Total fijado al confirmar. El corte del día suma este valor en vez de
+  /// recalcular, para que un cambio posterior en la promoción no altere lo
+  /// que ya se cobró.
+  double? totalCobrado;
+
   Pedido({
     required this.id,
     required this.partidas,
