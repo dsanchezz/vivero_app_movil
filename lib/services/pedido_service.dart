@@ -1,4 +1,6 @@
+import '../models/partida.dart';
 import '../models/pedido.dart';
+import '../models/tipo_cliente.dart';
 import 'pricing/calculadora_precio.dart';
 import 'promocion_service.dart';
 
@@ -9,10 +11,23 @@ import 'promocion_service.dart';
 class PedidoService {
   final List<Pedido> _pedidos = [];
   final CalculadoraPrecio _calculadoraPrecio = CalculadoraPrecio();
+  int _consecutivo = 0;
 
   List<Pedido> get pedidos => List.unmodifiable(_pedidos);
 
   void registrar(Pedido pedido) => _pedidos.add(pedido);
+
+  /// Registra un pedido pendiente con las partidas del carrito.
+  Pedido crearPedido(List<Partida> partidas, TipoCliente tipoCliente) {
+    _consecutivo++;
+    final pedido = Pedido(
+      id: 'P-${_consecutivo.toString().padLeft(3, '0')}',
+      partidas: List.of(partidas),
+      tipoCliente: tipoCliente,
+    );
+    registrar(pedido);
+    return pedido;
+  }
 
   double calcularTotalPedido(Pedido pedido) {
     final promocionActiva = PromocionService.temporadaActiva;
@@ -28,6 +43,7 @@ class PedidoService {
   }
 
   Pedido confirmar(Pedido pedido) {
+    pedido.totalCobrado = calcularTotalPedido(pedido);
     pedido.estado = EstadoPedido.confirmado;
     return pedido;
   }
@@ -37,9 +53,15 @@ class PedidoService {
     return pedido;
   }
 
+  /// Suma lo cobrado en cada pedido confirmado, no un recálculo con la
+  /// promoción vigente ahora.
   double corteDelDia() {
     return _pedidos
         .where((p) => p.estado == EstadoPedido.confirmado)
-        .fold(0.0, (total, pedido) => total + calcularTotalPedido(pedido));
+        .fold(
+          0.0,
+          (total, pedido) =>
+              total + (pedido.totalCobrado ?? calcularTotalPedido(pedido)),
+        );
   }
 }
